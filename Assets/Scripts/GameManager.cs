@@ -17,19 +17,24 @@ public class GameManager : MonoBehaviourPunCallbacks
     public PlayerControllerScript[] players;
     public int playerWithHat;
     int playersInGame;
-
+    public LayerMask lm;
     public static GameManager instance;
 
-
+    public List<Transform> sps;
     void Awake()
     {
         instance = this;
-
+        sps = new List<Transform>();
+        sps.AddRange(spawnPoints);
     }
     void Start()
     {
         players = new PlayerControllerScript[PhotonNetwork.PlayerList.Length];
         photonView.RPC("IAmInGame", RpcTarget.AllBuffered);
+        //for (int i = 0; i < spawnPoints.Length; i++)
+        //{
+            
+        //}
     }
     [PunRPC]
     void IAmInGame()
@@ -42,8 +47,18 @@ public class GameManager : MonoBehaviourPunCallbacks
     }
     void SpawnPlayer() 
     {
-        GameObject playerObj = PhotonNetwork.Instantiate(playerPrefabLocation, spawnPoints[Random.Range(0, spawnPoints.Length)].position, Quaternion.identity);
+        int r = Random.Range(0, spawnPoints.Length);
+       
+        while (Physics.BoxCast(spawnPoints[r].position+(Vector3.up * 3), Vector3.one, Vector3.down,Quaternion.identity,5,lm))
+        {
 
+             r = Random.Range(0, spawnPoints.Length);
+            Debug.Log(r);
+        }
+      
+       
+        GameObject playerObj = PhotonNetwork.Instantiate(playerPrefabLocation, spawnPoints[r].position, Quaternion.identity);
+     
         PlayerControllerScript playerScript = playerObj.GetComponent<PlayerControllerScript>();
 
         playerScript.photonView.RPC("Initialize", RpcTarget.All, PhotonNetwork.LocalPlayer);
@@ -57,8 +72,29 @@ public class GameManager : MonoBehaviourPunCallbacks
     {
         return players.First(x => x.gameObject == pObj);
     }
-    void Update()
+    [PunRPC]
+    public void GiveHat(int playerId, bool firstGive) 
     {
-        
+        if (!firstGive)
+        {
+            GetPlayer(playerWithHat).SetHat(false);
+            
+        }
+        playerWithHat = playerId;
+        GetPlayer(playerWithHat).SetHat(true);
+        hatPickupTime = Time.time;
+    }
+
+    public bool CanGetHat() 
+    {
+        if (Time.time>hatPickupTime+cooldownTime)
+        {
+            return true;
+           
+        }
+        else
+        {
+            return false;
+        }
     }
 }
