@@ -26,6 +26,11 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
 
         GameManager.instance.players[id - 1] = this;
 
+        if (id==1)
+        {
+            GameManager.instance.GiveHat(id, true);
+        }
+
         if (!photonView.IsMine)
         {
             rb.isKinematic = true;
@@ -39,19 +44,28 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
     // Update is called once per frame
     void Update()
     {
-        Move();
-        if (Input.GetKeyDown(KeyCode.Space))
+        if (PhotonNetwork.IsMasterClient)
         {
-            Jump();
+           
         }
+        if (!photonView.IsMine)
+        {
+            Move();
+            if (Input.GetKeyDown(KeyCode.Space))
+            {
+                Jump();
+            }
+        }
+       
     }
 
     void Move()
     {
         float x = Input.GetAxis("Horizontal") * moveSpeed;
         float z = Input.GetAxis("Vertical") * moveSpeed;
-        transform.Translate(new Vector3(x, rb.velocity.y, z) * Time.deltaTime);
-        // rb.velocity = new Vector3(x, rb.velocity.y, z);
+       // transform.Translate(new Vector3(x, rb.velocity.y, z) * Time.deltaTime);
+        rb.velocity = new Vector3(x, rb.velocity.y, z);
+        
     }
     void Jump()
     {
@@ -62,6 +76,25 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
         }
        
     }
-
-
+    public void SetHat(bool hatIs) 
+    {
+        hatObj.SetActive(hatIs);
+    }
+    private void OnCollisionEnter(Collision collision)
+    {
+        if (!photonView.IsMine)
+        {
+            return;
+        }
+        if (collision.gameObject.tag=="Player")
+        {
+            if (GameManager.instance.GetPlayer(collision.gameObject).id==GameManager.instance.playerWithHat)
+            {
+                if (GameManager.instance.CanGetHat())
+                {
+                    GameManager.instance.photonView.RPC("GiveHat", RpcTarget.All, id, false);
+                }
+            }
+        }
+    }
 }
