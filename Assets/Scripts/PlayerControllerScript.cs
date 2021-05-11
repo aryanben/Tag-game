@@ -33,7 +33,7 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
 
         if (!photonView.IsMine)
         {
-            rb.isKinematic = true;
+           // rb.isKinematic = true;
         }
     }
     void Start()
@@ -48,7 +48,7 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
         {
            
         }
-        if (!photonView.IsMine)
+        if (photonView.IsMine)
         {
             Move();
             if (Input.GetKeyDown(KeyCode.Space))
