@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using Photon.Pun;
 using Photon.Realtime;
-public class PlayerControllerScript : MonoBehaviourPunCallbacks
+public class PlayerControllerScript : MonoBehaviourPunCallbacks, IPunObservable
 {
     public int id;
 
@@ -26,14 +26,14 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
 
         GameManager.instance.players[id - 1] = this;
 
-        if (id==1)
+        if (id == 1)
         {
             GameManager.instance.GiveHat(id, true);
         }
 
         if (!photonView.IsMine)
         {
-           // rb.isKinematic = true;
+            // rb.isKinematic = true;
         }
     }
     void Start()
@@ -46,7 +46,13 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
     {
         if (PhotonNetwork.IsMasterClient)
         {
-           
+            if (curHatTime >= GameManager.instance.timeToWin
+                && !GameManager.instance.gameEnded)
+            {
+                GameManager.instance.gameEnded = true;
+                GameManager.instance.photonView.RPC("WinGame", RpcTarget.All, id);
+
+            }
         }
         if (photonView.IsMine)
         {
@@ -55,17 +61,22 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
             {
                 Jump();
             }
+            if (hatObj.activeInHierarchy)
+            {
+                curHatTime += Time.deltaTime;
+            }
+            Debug.Log(PhotonNetwork.NickName+"="+curHatTime);
         }
-       
+
     }
 
     void Move()
     {
         float x = Input.GetAxis("Horizontal") * moveSpeed;
         float z = Input.GetAxis("Vertical") * moveSpeed;
-       // transform.Translate(new Vector3(x, rb.velocity.y, z) * Time.deltaTime);
+        // transform.Translate(new Vector3(x, rb.velocity.y, z) * Time.deltaTime);
         rb.velocity = new Vector3(x, rb.velocity.y, z);
-        
+
     }
     void Jump()
     {
@@ -74,11 +85,12 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
         {
             rb.AddForce(Vector3.up * jumpForce, ForceMode.Impulse);
         }
-       
+
     }
-    public void SetHat(bool hatIs) 
+    public void SetHat(bool hatIs)
     {
         hatObj.SetActive(hatIs);
+        curHatTime = 0;
     }
     private void OnCollisionEnter(Collision collision)
     {
@@ -86,15 +98,26 @@ public class PlayerControllerScript : MonoBehaviourPunCallbacks
         {
             return;
         }
-        if (collision.gameObject.tag=="Player")
+        if (collision.gameObject.tag == "Player")
         {
-            if (GameManager.instance.GetPlayer(collision.gameObject).id==GameManager.instance.playerWithHat)
+            if (GameManager.instance.GetPlayer(collision.gameObject).id == GameManager.instance.playerWithHat)
             {
                 if (GameManager.instance.CanGetHat())
                 {
                     GameManager.instance.photonView.RPC("GiveHat", RpcTarget.All, id, false);
                 }
             }
+        }
+    }
+    public void OnPhotonSerializeView(PhotonStream stream, PhotonMessageInfo info)
+    {
+        if (stream.IsWriting)
+        {
+            stream.SendNext(curHatTime);
+        }
+        else if (stream.IsReading)
+        {
+            curHatTime=(float)stream.ReceiveNext();
         }
     }
 }

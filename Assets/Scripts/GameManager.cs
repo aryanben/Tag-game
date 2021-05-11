@@ -97,4 +97,19 @@ public class GameManager : MonoBehaviourPunCallbacks
             return false;
         }
     }
+    [PunRPC]
+    void WinGame(int playerID)
+    {
+        gameEnded = true;
+        PlayerControllerScript player = GetPlayer(playerID);
+        GameUIScript.instance.SetWinText(player.photonPlayer.NickName);
+
+        Invoke("BackToMenu", 3f);
+    }
+    void BackToMenu() 
+    {
+        // Debug.Log("leavinger");
+        PhotonNetwork.LeaveRoom();
+        NetworkManager.instance.ChangeScene("Menu");
+    }
 }
